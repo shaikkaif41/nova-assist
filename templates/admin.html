@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NOVA-ASSIST Admin</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .layout {
+            display: flex;
+            height: calc(100vh - 75px);
+        }
+
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+
+        .conversation {
+            padding: 18px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .conversation:hover {
+            background: #f3f4f6;
+        }
+
+        .main {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .message {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+        }
+
+        .USER {
+            background: #e0f2fe;
+        }
+
+        .ASSISTANT {
+            background: #ecfdf5;
+        }
+
+        .SYSTEM {
+            background: #f3f4f6;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .tool {
+            border-left: 4px solid #6366f1;
+            padding: 12px;
+            margin: 10px 0;
+            background: #f8fafc;
+        }
+
+        .escalation {
+            border-left: 4px solid #dc2626;
+            padding: 12px;
+            background: #fef2f2;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🛡️ NOVA-ASSIST Admin</h1>
+</header>
+
+<div class="layout">
+
+    <div class="sidebar">
+        <div id="conversationList">
+            Loading...
+        </div>
+    </div>
+
+    <div class="main">
+
+        <div class="card">
+            <h2>Conversation</h2>
+            <div id="messages">
+                Select a conversation.
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔧 Tool Calls</h2>
+            <div id="tools">
+                No conversation selected.
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🚨 Escalations</h2>
+            <div id="escalations">
+                No conversation selected.
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+async function loadConversations() {
+
+    const response = await fetch("/api/conversations");
+
+    const data = await response.json();
+
+    const container =
+        document.getElementById("conversationList");
+
+    container.innerHTML = "";
+
+    data.forEach(conversation => {
+
+        const div = document.createElement("div");
+
+        div.className = "conversation";
+
+        div.innerHTML = `
+            <strong>
+                Conversation #${conversation.conversation_id}
+            </strong>
+            <br>
+            Customer:
+            ${conversation.customer_id || "Guest"}
+            <br>
+            Messages:
+            ${conversation.message_count}
+            <br>
+            <small>
+                ${conversation.started_at}
+            </small>
+        `;
+
+        div.onclick = () => {
+            loadConversation(
+                conversation.conversation_id
+            );
+        };
+
+        container.appendChild(div);
+    });
+}
+
+
+async function loadConversation(id) {
+
+    const response =
+        await fetch(`/api/conversations/${id}`);
+
+    const data = await response.json();
+
+    const messages =
+        document.getElementById("messages");
+
+    messages.innerHTML = "";
+
+    data.messages.forEach(message => {
+
+        const div =
+            document.createElement("div");
+
+        div.className =
+            `message ${message.role}`;
+
+        div.innerHTML = `
+            <strong>${message.role}</strong>
+            <p>${escapeHtml(message.content)}</p>
+            <small>${message.created_at}</small>
+        `;
+
+        messages.appendChild(div);
+    });
+
+
+    const tools =
+        document.getElementById("tools");
+
+    tools.innerHTML = "";
+
+    if (data.tools.length === 0) {
+
+        tools.innerHTML = "No tools used.";
+
+    } else {
+
+        data.tools.forEach(tool => {
+
+            const div =
+                document.createElement("div");
+
+            div.className = "tool";
+
+            div.innerHTML = `
+                <strong>${tool.tool_name}</strong>
+
+                <p>
+                    <b>Success:</b>
+                    ${tool.success ? "Yes" : "No"}
+                </p>
+
+                <b>Input</b>
+                <pre>${escapeHtml(tool.input_data)}</pre>
+
+                <b>Output</b>
+                <pre>${escapeHtml(tool.output_data)}</pre>
+            `;
+
+            tools.appendChild(div);
+        });
+    }
+
+
+    const escalations =
+        document.getElementById("escalations");
+
+    escalations.innerHTML = "";
+
+    if (data.escalations.length === 0) {
+
+        escalations.innerHTML =
+            "No escalations.";
+
+    } else {
+
+        data.escalations.forEach(item => {
+
+            const div =
+                document.createElement("div");
+
+            div.className = "escalation";
+
+            div.innerHTML = `
+                <strong>
+                    Escalation #${item.escalation_id}
+                </strong>
+
+                <p>${escapeHtml(item.reason)}</p>
+
+                <b>Status:</b>
+                ${item.status}
+
+                <br>
+
+                <small>
+                    ${item.created_at}
+                </small>
+            `;
+
+            escalations.appendChild(div);
+        });
+    }
+}
+
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+}
+
+
+loadConversations();
+
+</script>
+
+</body>
+</html>
