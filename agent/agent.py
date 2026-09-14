@@ -158,6 +158,11 @@ PROTECTED_TOOLS = {
     "create_return_request"
 }
 
+WRITE_TOOLS = {
+    "create_return_request",
+    "create_escalation"
+}
+
 
 def chat(user_message, conversation_id=None):
 

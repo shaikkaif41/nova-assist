@@ -120,10 +120,8 @@ def get_verification_state(conversation_id):
     rows = conn.execute(
         """
         SELECT
-            tool_name,
             input_data,
-            output_data,
-            success
+            output_data
         FROM tool_call_log
         WHERE conversation_id = ?
         AND tool_name = 'verify_customer'
@@ -140,11 +138,10 @@ def get_verification_state(conversation_id):
     verified_order_id = None
 
     for row in rows:
-
         try:
-            output = json.loads(row["output_data"])
             inputs = json.loads(row["input_data"])
-        except:
+            output = json.loads(row["output_data"])
+        except Exception:
             continue
 
         if output.get("verified") is True:
@@ -152,7 +149,6 @@ def get_verification_state(conversation_id):
             customer_id = output.get("customer_id")
             verified_order_id = inputs.get("order_id")
             failures = 0
-
         else:
             failures += 1
 

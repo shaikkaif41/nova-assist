@@ -123,9 +123,9 @@ def search_products(search_term):
             stock_quantity,
             is_returnable
         FROM products
-        WHERE name LIKE ?
-           OR category LIKE ?
-           OR description LIKE ?
+        WHERE LOWER(name) LIKE LOWER(?)
+           OR LOWER(category) LIKE LOWER(?)
+           OR LOWER(description) LIKE LOWER(?)
         ORDER BY name
     """
 
